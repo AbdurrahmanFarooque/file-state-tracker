@@ -1,0 +1,19 @@
+info:
+  name: post case file
+  type: http
+
+http:
+  method: POST
+  url: http://127.0.0.1:8000/case_files/983?state=chamber
+  params:
+    - name: state
+      value: chamber
+      type: query
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+​

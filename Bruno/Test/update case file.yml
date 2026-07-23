@@ -1,0 +1,18 @@
+info:
+  name: update case file
+  type: http
+
+http:
+  method: PATCH
+  url: http://127.0.0.1:8000/case_files/981?state=records
+  params:
+    - name: state
+      value: records
+      type: query
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

@@ -9,7 +9,7 @@ from models import FileState
 postgres_url = "postgresql://postgres:1234@localhost:5432/postgres"
 
 connect_args = {"check_same_thread": False}
-engine = create_engine(postgres_url, echo=True, connect_args=connect_args) # Remove echo=True in production
+engine = create_engine(postgres_url, echo=True) # Remove echo=True in production
 
 
 def create_db_and_tables():
