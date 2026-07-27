@@ -4,6 +4,30 @@ from pydantic import BaseModel
 from sqlmodel import SQLModel, Relationship, Field
 
 
+class Token(BaseModel):
+    access_token: str
+    token_type: str
+
+
+class TokenData(BaseModel):
+    username: str | None = None
+
+
+class User(BaseModel):
+    username: str
+    email: str | None = None
+    full_name: str | None = None
+    disabled: bool | None = None
+
+
+class UserInDB(User):
+    hashed_password: str
+
+
+class UserTable(UserInDB, SQLModel, table=True):
+    user_id: int | None = Field(default=None, primary_key=True)
+    
+
 # case_file
 class CaseFile(SQLModel, table=True):
     cnr: int = Field(primary_key=True)

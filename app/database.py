@@ -3,7 +3,7 @@ from typing import Annotated
 from fastapi import Depends
 from sqlmodel import select, create_engine, SQLModel, Session
 
-from models import FileState
+from app.models import FileState
 
 
 postgres_url = "postgresql://postgres:1234@localhost:5432/postgres"

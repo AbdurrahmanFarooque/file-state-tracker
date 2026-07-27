@@ -1,19 +1,72 @@
+from datetime import timedelta, datetime, timezone
 from typing import Annotated
 
-from fastapi import FastAPI, HTTPException, Query
+import jwt
+from jwt.exceptions import InvalidTokenError
+from fastapi import FastAPI, HTTPException, Depends, status
+from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from sqlmodel import select
+from pwdlib import PasswordHash
 
-from models import CaseFile, FileState
-from database import create_db_and_tables, populate_filestate, SessionDependancy
+from app.models import CaseFile, FileState, User, UserInDB, Token, TokenData
+from app.database import create_db_and_tables, populate_filestate, SessionDependancy
+from app.auth import authenticate_user, get_current_user, create_access_token, get_current_active_user, ACCESS_TOKEN_EXPIRE_MINUTES
 
+
+fake_users_db = {
+    "johndoe": {
+        "username": "johndoe",
+        "full_name": "John Doe",
+        "email": "johndoe@example.com",
+        "hashed_password": "fakehashedsecret",
+        "disabled": False,
+    },
+    "alice": {
+        "username": "alice",
+        "full_name": "Alice Wonderson",
+        "email": "alice@example.com",
+        "hashed_password": "fakehashedsecret2",
+        "disabled": True,
+    },
+}
+
+password_hash = PasswordHash.recommended()
+
+DUMMY_HASH = password_hash.hash("dummypassword")
+
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
 app = FastAPI()
+
+
+@app.post("/token")
+def login_for_access_token(form_data: Annotated[OAuth2PasswordRequestForm, Depends()]):
+    user = authenticate_user(fake_users_db, form_data.username, form_data.password)
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, 
+            detail="Incorrect username or password",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    access_token = create_access_token(data={"sub": user.username}, expires_delta=access_token_expires)
+    return Token(access_token=access_token, token_type="bearer")
+
+
+@app.get("/users/me")
+def read_user_me(current_user: Annotated[User, Depends(get_current_active_user)]):
+    return current_user
+
+
+@app.get("/users/me/items")
+def read_own_items(current_user: Annotated[User, Depends(get_current_active_user)]):
+    return {"item_id": "Foo", "owner": current_user.username}
 
 
 @app.on_event("startup")
 def on_startup():
     create_db_and_tables()
-    populate_filestate()
+    # populate_filestate()
 
 
 # Upload a new case file
@@ -41,7 +94,7 @@ def upload_case_file(cnr: int, state: str, session: SessionDependancy):
 
 # Read all case files
 @app.get("/case_files/")
-def list_case_files(session: SessionDependancy):
+def list_case_files(session: SessionDependancy, token: Annotated[str, Depends(oauth2_scheme)]):
     case_files = session.exec(select(CaseFile)).all()
     return {"case_files": [{"cnr": case_file.cnr, "state":case_file.file_state.label} for case_file in case_files]}
 

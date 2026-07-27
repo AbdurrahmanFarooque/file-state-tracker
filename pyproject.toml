@@ -1,2 +1,16 @@
 [tool.fastapi]
-entrypoint = "main:app"
+entrypoint = "app.main:app"
+
+[dependency-groups]
+dev = [
+    "python-multipart>=0.0.32",
+]
+
+[project]
+name = "file-state-trakcer"
+version = "0.1.0"
+dependencies = [
+    "pwdlib[argon2]>=0.3.0",
+    "pyjwt>=2.13.0",
+    "python-multipart>=0.0.32",
+]
