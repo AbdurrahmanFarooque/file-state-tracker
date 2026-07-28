@@ -7,7 +7,7 @@ dev = [
 ]
 
 [project]
-name = "file-state-trakcer"
+name = "file-state-tracker"
 version = "0.1.0"
 dependencies = [
     "pwdlib[argon2]>=0.3.0",
