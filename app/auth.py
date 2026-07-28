@@ -3,35 +3,18 @@ from typing import Annotated
 
 import jwt
 from fastapi import Depends, HTTPException, status
-from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
+from fastapi.security import OAuth2PasswordBearer
 from pwdlib import PasswordHash
 from jwt.exceptions import InvalidTokenError
 
 from app.user import get_user
 from app.models import User, TokenData
+from app.database import SessionDependancy
 
 
 SECRET_KEY = "229ff14dad75cf5a6fcf031ae6ddad50b4d0452d74bafd23c39d63a27d68384b"
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
-
-
-fake_users_db = {
-    "johndoe": {
-        "username": "johndoe",
-        "full_name": "John Doe",
-        "email": "johndoe@example.com",
-        "hashed_password": "fakehashedsecret",
-        "disabled": False,
-    },
-    "alice": {
-        "username": "alice",
-        "full_name": "Alice Wonderson",
-        "email": "alice@example.com",
-        "hashed_password": "fakehashedsecret2",
-        "disabled": True,
-    },
-}
 
 
 password_hash = PasswordHash.recommended()
@@ -46,11 +29,11 @@ def verify_password(plain_password, hashed_password):
 
 
 def get_password_hash(password):
-    password_hash.hash(password)
+    return password_hash.hash(password)
 
 
-def authenticate_user(fake_db, username: str, password: str):
-    user = get_user(fake_db, username)
+def authenticate_user(session: SessionDependancy, username: str, password: str):
+    user = get_user(session, username)
     if not user:
         verify_password(password, DUMMY_HASH)
         return False
@@ -70,7 +53,7 @@ def create_access_token(data: dict, expires_delta: timedelta | None = None):
     return encoded_jwt
 
 
-def get_current_user(token: Annotated[str, Depends(oauth2_scheme)]):
+def get_current_user(session: SessionDependancy, token: Annotated[str, Depends(oauth2_scheme)]):
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Could not validate credentials", 
@@ -84,7 +67,7 @@ def get_current_user(token: Annotated[str, Depends(oauth2_scheme)]):
         token_data = TokenData(username=username)
     except InvalidTokenError:
         raise credentials_exception
-    user = get_user(fake_users_db, username=token_data.username)
+    user = get_user(session=session, username=token_data.username)
     if user is None:
         raise credentials_exception
     return user

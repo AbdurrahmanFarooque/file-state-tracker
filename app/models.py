@@ -1,5 +1,3 @@
-from typing import Optional
-
 from pydantic import BaseModel
 from sqlmodel import SQLModel, Relationship, Field
 
@@ -20,12 +18,9 @@ class User(BaseModel):
     disabled: bool | None = None
 
 
-class UserInDB(User):
-    hashed_password: str
-
-
-class UserTable(UserInDB, SQLModel, table=True):
+class UserInDB(User, SQLModel, table=True):
     user_id: int | None = Field(default=None, primary_key=True)
+    hashed_password: str
     
 
 # case_file

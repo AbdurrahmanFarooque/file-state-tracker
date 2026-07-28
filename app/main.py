@@ -1,34 +1,15 @@
-from datetime import timedelta, datetime, timezone
+from datetime import timedelta
 from typing import Annotated
 
-import jwt
-from jwt.exceptions import InvalidTokenError
 from fastapi import FastAPI, HTTPException, Depends, status
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from sqlmodel import select
 from pwdlib import PasswordHash
 
-from app.models import CaseFile, FileState, User, UserInDB, Token, TokenData
+from app.models import CaseFile, FileState, User, UserInDB, Token
 from app.database import create_db_and_tables, populate_filestate, SessionDependancy
-from app.auth import authenticate_user, get_current_user, create_access_token, get_current_active_user, ACCESS_TOKEN_EXPIRE_MINUTES
+from app.auth import authenticate_user, create_access_token, get_current_active_user, get_password_hash, ACCESS_TOKEN_EXPIRE_MINUTES
 
-
-fake_users_db = {
-    "johndoe": {
-        "username": "johndoe",
-        "full_name": "John Doe",
-        "email": "johndoe@example.com",
-        "hashed_password": "fakehashedsecret",
-        "disabled": False,
-    },
-    "alice": {
-        "username": "alice",
-        "full_name": "Alice Wonderson",
-        "email": "alice@example.com",
-        "hashed_password": "fakehashedsecret2",
-        "disabled": True,
-    },
-}
 
 password_hash = PasswordHash.recommended()
 
@@ -39,9 +20,15 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 app = FastAPI()
 
 
+@app.on_event("startup")
+def on_startup():
+    create_db_and_tables()
+    # populate_filestate()
+
+
 @app.post("/token")
-def login_for_access_token(form_data: Annotated[OAuth2PasswordRequestForm, Depends()]):
-    user = authenticate_user(fake_users_db, form_data.username, form_data.password)
+def login_for_access_token(session: SessionDependancy, form_data: Annotated[OAuth2PasswordRequestForm, Depends()]):
+    user = authenticate_user(session, form_data.username, form_data.password)
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, 
@@ -53,6 +40,16 @@ def login_for_access_token(form_data: Annotated[OAuth2PasswordRequestForm, Depen
     return Token(access_token=access_token, token_type="bearer")
 
 
+@app.post("/signup")
+def signup_tmp(session: SessionDependancy, username: str, full_name: str, password: str, email: str, disabled: bool = False):
+    db_user = UserInDB(username=username, full_name=full_name, hashed_password=get_password_hash(password), email=email, disabled=disabled)
+    session.add(db_user)
+    session.commit()
+    session.refresh(db_user)
+
+    return {"message": "User added successfully", "cred": {"id": db_user.user_id, "username": db_user.username, "password": db_user.hashed_password}}
+
+
 @app.get("/users/me")
 def read_user_me(current_user: Annotated[User, Depends(get_current_active_user)]):
     return current_user
@@ -61,12 +58,6 @@ def read_user_me(current_user: Annotated[User, Depends(get_current_active_user)]
 @app.get("/users/me/items")
 def read_own_items(current_user: Annotated[User, Depends(get_current_active_user)]):
     return {"item_id": "Foo", "owner": current_user.username}
-
-
-@app.on_event("startup")
-def on_startup():
-    create_db_and_tables()
-    # populate_filestate()
 
 
 # Upload a new case file

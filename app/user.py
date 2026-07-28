@@ -1,25 +1,11 @@
+from sqlmodel import select
+
 from app.models import UserInDB
+from app.database import SessionDependancy
 
 
-fake_users_db = {
-    "johndoe": {
-        "username": "johndoe",
-        "full_name": "John Doe",
-        "email": "johndoe@example.com",
-        "hashed_password": "fakehashedsecret",
-        "disabled": False,
-    },
-    "alice": {
-        "username": "alice",
-        "full_name": "Alice Wonderson",
-        "email": "alice@example.com",
-        "hashed_password": "fakehashedsecret2",
-        "disabled": True,
-    },
-}
-
-
-def get_user(db, username: str | None = None):
-    if username in db:
-        user_dict = db[username]
+def get_user(session: SessionDependancy, username: str | None = None):
+    user = session.exec(select(UserInDB).where(UserInDB.username == username)).first()
+    if user:
+        user_dict = user.model_dump()
         return UserInDB(**user_dict)
