@@ -40,8 +40,8 @@ def login_for_access_token(session: SessionDependancy, form_data: Annotated[OAut
     return Token(access_token=access_token, token_type="bearer")
 
 
-@app.post("/signup")
-def signup_tmp(session: SessionDependancy, username: str, full_name: str, password: str, email: str, disabled: bool = False):
+@app.post("/api/auth/register")
+def register_new_user(session: SessionDependancy, username: str, full_name: str, password: str, email: str, disabled: bool = False):
     db_user = UserInDB(username=username, full_name=full_name, hashed_password=get_password_hash(password), email=email, disabled=disabled)
     session.add(db_user)
     session.commit()
@@ -61,7 +61,7 @@ def read_own_items(current_user: Annotated[User, Depends(get_current_active_user
 
 
 # Upload a new case file
-@app.post("/case_files/{cnr}")
+@app.post("/api/case_files/{cnr}")
 def upload_case_file(cnr: int, state: str, session: SessionDependancy):
     # Check if the case file already exists
     case_file_exists = session.get(CaseFile, cnr) is not None
@@ -84,14 +84,14 @@ def upload_case_file(cnr: int, state: str, session: SessionDependancy):
 
 
 # Read all case files
-@app.get("/case_files/")
+@app.get("/api/case_files/")
 def list_case_files(session: SessionDependancy, token: Annotated[str, Depends(oauth2_scheme)]):
     case_files = session.exec(select(CaseFile)).all()
     return {"case_files": [{"cnr": case_file.cnr, "state":case_file.file_state.label} for case_file in case_files]}
 
 
 # Read a specific case file
-@app.get("/case_files/{cnr}")
+@app.get("/api/case_files/{cnr}")
 def read_case_file_state(cnr: int, session: SessionDependancy):
     case_file = session.get(CaseFile, cnr)
     if not case_file:
@@ -100,7 +100,7 @@ def read_case_file_state(cnr: int, session: SessionDependancy):
 
 
 # Update the state of a case file
-@app.patch("/case_files/{cnr}")
+@app.patch("/api/case_files/{cnr}")
 def update_case_file_state(cnr: int, state: str, session: SessionDependancy):
     case_file = session.get(CaseFile, cnr)
     if not case_file:
@@ -121,7 +121,7 @@ def update_case_file_state(cnr: int, state: str, session: SessionDependancy):
 
 
 # Delete a case file
-@app.delete("/case_files/{cnr}")
+@app.delete("/api/case_files/{cnr}")
 def delete_case_file(cnr: int, session: SessionDependancy):
     case_file = session.get(CaseFile, cnr)
     if not case_file:
