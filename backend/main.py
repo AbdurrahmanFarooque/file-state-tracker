@@ -6,9 +6,9 @@ from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from sqlmodel import select
 from pwdlib import PasswordHash
 
-from app.models import CaseFile, FileState, User, UserInDB, Token
-from app.database import create_db_and_tables, populate_filestate, SessionDependancy
-from app.auth import authenticate_user, create_access_token, get_current_active_user, get_password_hash, ACCESS_TOKEN_EXPIRE_MINUTES
+from backend.models import CaseFile, FileState, User, UserInDB, Token
+from backend.database import create_db_and_tables, populate_filestate, SessionDependancy
+from backend.auth import authenticate_user, create_access_token, get_current_active_user, get_password_hash, ACCESS_TOKEN_EXPIRE_MINUTES
 
 
 password_hash = PasswordHash.recommended()
