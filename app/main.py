@@ -26,7 +26,7 @@ def on_startup():
     # populate_filestate()
 
 
-@app.post("/api/auth/login")
+@app.post("/token")
 def login_for_access_token(session: SessionDependancy, form_data: Annotated[OAuth2PasswordRequestForm, Depends()]):
     user = authenticate_user(session, form_data.username, form_data.password)
     if not user:
