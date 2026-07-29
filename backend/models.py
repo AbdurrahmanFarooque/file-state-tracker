@@ -1,3 +1,4 @@
+from enum import Enum
 from pydantic import BaseModel
 from sqlmodel import SQLModel, Relationship, Field
 
@@ -11,14 +12,32 @@ class TokenData(BaseModel):
     username: str | None = None
 
 
-class User(BaseModel):
+class UserRole(str, Enum):
+    section_assistant = "section assistant"
+    listing_officer = "listing officer"
+
+
+class UserBase(SQLModel):
     username: str
-    email: str | None = None
-    full_name: str | None = None
-    disabled: bool | None = None
+    full_name: str
+    email: str
+    user_role: UserRole
+    disabled: bool
 
 
-class UserInDB(User, SQLModel, table=True):
+class UserPublic(UserBase):
+    pass
+
+
+class UserCreate(UserBase):
+    password: str
+    disabled: bool | None = False
+
+class UserUpdate(UserBase):
+    pass
+
+
+class User(UserBase, SQLModel, table=True):
     user_id: int | None = Field(default=None, primary_key=True)
     hashed_password: str
     

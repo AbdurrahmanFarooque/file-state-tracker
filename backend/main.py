@@ -6,7 +6,7 @@ from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from sqlmodel import select
 from pwdlib import PasswordHash
 
-from backend.models import CaseFile, FileState, User, UserInDB, Token
+from backend.models import CaseFile, FileState, UserCreate, UserPublic, UserUpdate, User, Token, UserRole
 from backend.database import create_db_and_tables, populate_filestate, SessionDependancy
 from backend.auth import authenticate_user, create_access_token, get_current_active_user, get_password_hash, ACCESS_TOKEN_EXPIRE_MINUTES
 
@@ -41,8 +41,11 @@ def login_for_access_token(session: SessionDependancy, form_data: Annotated[OAut
 
 
 @app.post("/api/auth/register")
-def register_new_user(session: SessionDependancy, username: str, full_name: str, password: str, email: str, disabled: bool = False):
-    db_user = UserInDB(username=username, full_name=full_name, hashed_password=get_password_hash(password), email=email, disabled=disabled)
+def register_new_user(session: SessionDependancy, user: UserCreate):
+    hashed_password = get_password_hash(user.password)
+    user_data = user.model_dump(exclude={"password"})
+
+    db_user = User(**user_data, hashed_password=hashed_password)
     session.add(db_user)
     session.commit()
     session.refresh(db_user)
@@ -50,14 +53,26 @@ def register_new_user(session: SessionDependancy, username: str, full_name: str,
     return {"message": "User added successfully", "cred": {"id": db_user.user_id, "username": db_user.username, "password": db_user.hashed_password}}
 
 
-@app.get("/users/me")
+@app.get("/api/users/me", response_model=UserPublic)
 def read_user_me(current_user: Annotated[User, Depends(get_current_active_user)]):
     return current_user
 
 
-@app.get("/users/me/items")
+@app.get("/api/users/me/items")
 def read_own_items(current_user: Annotated[User, Depends(get_current_active_user)]):
     return {"item_id": "Foo", "owner": current_user.username}
+
+
+@app.patch("/api/users/me")
+def update_profile(update_data: UserUpdate, current_user: Annotated[User, Depends(get_current_active_user)], session: SessionDependancy):
+    pass
+    current_user.email = update_data.email
+
+    session.add(current_user)
+    session.commit()
+    session.refresh(current_user)
+
+    return {"message": "Profile updated successfully", "updated profile": current_user}
 
 
 # Upload a new case file
