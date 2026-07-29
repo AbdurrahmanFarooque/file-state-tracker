@@ -6,8 +6,8 @@ from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from sqlmodel import select
 from pwdlib import PasswordHash
 
-from backend.models import CaseFile, FileState, UserCreate, UserPublic, UserUpdate, User, Token, UserRole
-from backend.database import create_db_and_tables, populate_filestate, SessionDependancy
+from backend.models import CaseFile, FileLocation, UserCreate, UserPublic, UserUpdate, User, Token, UserRole
+from backend.database import create_db_and_tables, populate_filelocation, SessionDependancy
 from backend.auth import authenticate_user, create_access_token, get_current_active_user, get_password_hash, ACCESS_TOKEN_EXPIRE_MINUTES
 
 
@@ -23,7 +23,7 @@ app = FastAPI()
 @app.on_event("startup")
 def on_startup():
     create_db_and_tables()
-    # populate_filestate()
+    # populate_filelocation()
 
 
 @app.post("/token")
@@ -90,62 +90,62 @@ def disable_profile(current_user: Annotated[User, Depends(get_current_active_use
 
 # Upload a new case file
 @app.post("/api/case_files/{cnr}")
-def upload_case_file(cnr: int, state: str, session: SessionDependancy):
+def upload_case_file(cnr: int, location: str, session: SessionDependancy):
     # Check if the case file already exists
     case_file_exists = session.get(CaseFile, cnr) is not None
     if case_file_exists:
         raise HTTPException(status_code=400, detail=f"Case file with CNR '{cnr}' already exists.")
     
-    # Check if the state exists
-    file_state_exists = session.exec(select(FileState).where(FileState.label == state)).first() is not None
-    if not file_state_exists:
-        raise HTTPException(status_code=400, detail=f"File state '{state}' does not exist.")
-    file_state_id = session.exec(select(FileState.id).where(FileState.label == state)).one()
+    # Check if the location exists
+    file_location_exists = session.exec(select(FileLocation).where(FileLocation.name == location)).first() is not None
+    if not file_location_exists:
+        raise HTTPException(status_code=400, detail=f"File location '{location}' does not exist.")
+    file_location_id = session.exec(select(FileLocation.id).where(FileLocation.name == location)).one()
 
     # Create a new case file
-    db_case_file = CaseFile(cnr=cnr, file_state_id=file_state_id)
+    db_case_file = CaseFile(cnr=cnr, file_location_id=file_location_id)
     session.add(db_case_file)
     session.commit()
     session.refresh(db_case_file)
 
-    return {"message": "Case file uploaded successfully", "case_file": {"cnr": db_case_file.cnr, "state": state}}
+    return {"message": "Case file uploaded successfully", "case_file": {"cnr": db_case_file.cnr, "location": location}}
 
 
 # Read all case files
 @app.get("/api/case_files/")
 def list_case_files(session: SessionDependancy, token: Annotated[str, Depends(oauth2_scheme)]):
     case_files = session.exec(select(CaseFile)).all()
-    return {"case_files": [{"cnr": case_file.cnr, "state":case_file.file_state.label} for case_file in case_files]}
+    return {"case_files": [{"cnr": case_file.cnr, "location":case_file.file_location.name} for case_file in case_files]}
 
 
 # Read a specific case file
 @app.get("/api/case_files/{cnr}")
-def read_case_file_state(cnr: int, session: SessionDependancy):
+def read_case_file_location(cnr: int, session: SessionDependancy):
     case_file = session.get(CaseFile, cnr)
     if not case_file:
         raise HTTPException(status_code=404, detail=f"Case file with CNR '{cnr}' not found.")
-    return {"case_file": {"cnr": case_file.cnr, "state": case_file.file_state.label}}
+    return {"case_file": {"cnr": case_file.cnr, "location": case_file.file_location.name}}
 
 
-# Update the state of a case file
+# Update the location of a case file
 @app.patch("/api/case_files/{cnr}")
-def update_case_file_state(cnr: int, state: str, session: SessionDependancy):
+def update_case_file_location(cnr: int, location: str, session: SessionDependancy):
     case_file = session.get(CaseFile, cnr)
     if not case_file:
         raise HTTPException(status_code=404, detail=f"Case file with CNR '{cnr}' not found.")
 
-    # Check if the new state exists
-    file_state_exists = session.exec(select(FileState).where(FileState.label == state)).first() is not None
-    if not file_state_exists:
-        raise HTTPException(status_code=400, detail=f"File state '{state}' does not exist.")
-    file_state_id = session.exec(select(FileState.id).where(FileState.label == state)).one()
+    # Check if the new location exists
+    file_location_exists = session.exec(select(FileLocation).where(FileLocation.name == location)).first() is not None
+    if not file_location_exists:
+        raise HTTPException(status_code=400, detail=f"File location '{location}' does not exist.")
+    file_location_id = session.exec(select(FileLocation.id).where(FileLocation.name == location)).one()
 
-    case_file.file_state_id = file_state_id
+    case_file.file_location_id = file_location_id
     session.add(case_file)
     session.commit()
     session.refresh(case_file)
 
-    return {"message": "Case file state updated successfully", "case_file": {"cnr": case_file.cnr, "state": case_file.file_state.label}}
+    return {"message": "Case file location updated successfully", "case_file": {"cnr": case_file.cnr, "location": case_file.file_location.name}}
 
 
 # Delete a case file
@@ -156,9 +156,9 @@ def delete_case_file(cnr: int, session: SessionDependancy):
         raise HTTPException(status_code=404, detail=f"Case file with CNR '{cnr}' not found.")
 
     case_file_cnr = case_file.cnr
-    case_file_state = case_file.file_state.label
+    case_file_location = case_file.file_location.name
 
     session.delete(case_file)
     session.commit()
 
-    return {"message": "Case file deleted successfully", "case_file": {"cnr": case_file_cnr, "state": case_file_state}}
+    return {"message": "Case file deleted successfully", "case_file": {"cnr": case_file_cnr, "location": case_file_location}}

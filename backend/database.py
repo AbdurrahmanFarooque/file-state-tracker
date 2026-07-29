@@ -3,7 +3,7 @@ from typing import Annotated
 from fastapi import Depends
 from sqlmodel import select, create_engine, SQLModel, Session
 
-from backend.models import FileState
+from backend.models import FileLocation
 
 
 postgres_url = "postgresql://postgres:1234@localhost:5432/postgres"
@@ -21,24 +21,24 @@ def get_session():
         yield session
 
 
-def populate_filestate():
+def populate_filelocation():
     with Session(engine) as session:
-        filestate_is_empty = session.exec(select(FileState)).first() is None
+        filelocation_is_empty = session.exec(select(FileLocation)).first() is None
 
-        if filestate_is_empty:
-            filestate_filing = FileState(label="filing")
-            filestate_section = FileState(label="section")
-            filestate_listing = FileState(label="listing")
-            filestate_court = FileState(label="court")
-            filestate_chamber = FileState(label="chamber")
-            filestate_records = FileState(label="records")
+        if filelocation_is_empty:
+            filelocation_filing = FileLocation(name="filing")
+            filelocation_section = FileLocation(name="section")
+            filelocation_listing = FileLocation(name="listing")
+            filelocation_court = FileLocation(name="court")
+            filelocation_chamber = FileLocation(name="chamber")
+            filelocation_records = FileLocation(name="records")
 
-            session.add(filestate_filing)
-            session.add(filestate_section)
-            session.add(filestate_listing)
-            session.add(filestate_court)
-            session.add(filestate_chamber)
-            session.add(filestate_records)
+            session.add(filelocation_filing)
+            session.add(filelocation_section)
+            session.add(filelocation_listing)
+            session.add(filelocation_court)
+            session.add(filelocation_chamber)
+            session.add(filelocation_records)
             session.commit()
 
 
