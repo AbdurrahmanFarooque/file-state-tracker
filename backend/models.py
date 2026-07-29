@@ -18,20 +18,22 @@ class UserRole(str, Enum):
 
 
 class UserBase(SQLModel):
+    full_name: str | None = None
+    email: str | None = None
+
+
+class UserPublic(UserBase):
     username: str
-    full_name: str
-    email: str
     user_role: UserRole
     disabled: bool
 
 
-class UserPublic(UserBase):
-    pass
-
-
 class UserCreate(UserBase):
+    username: str
     password: str
     disabled: bool | None = False
+    user_role: UserRole = UserRole.section_assistant
+
 
 class UserUpdate(UserBase):
     pass
@@ -39,7 +41,10 @@ class UserUpdate(UserBase):
 
 class User(UserBase, SQLModel, table=True):
     user_id: int | None = Field(default=None, primary_key=True)
+    username: str
+    user_role: UserRole
     hashed_password: str
+    disabled: bool
     
 
 # case_file

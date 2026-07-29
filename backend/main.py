@@ -55,6 +55,7 @@ def register_new_user(session: SessionDependancy, user: UserCreate):
 
 @app.get("/api/users/me", response_model=UserPublic)
 def read_user_me(current_user: Annotated[User, Depends(get_current_active_user)]):
+    # print(current_user)
     return current_user
 
 
@@ -64,15 +65,27 @@ def read_own_items(current_user: Annotated[User, Depends(get_current_active_user
 
 
 @app.patch("/api/users/me")
-def update_profile(update_data: UserUpdate, current_user: Annotated[User, Depends(get_current_active_user)], session: SessionDependancy):
-    pass
-    current_user.email = update_data.email
+def update_profile(user_update: UserUpdate, current_user: Annotated[User, Depends(get_current_active_user)], session: SessionDependancy):
+    if user_update.full_name != "string":
+        current_user.full_name = user_update.full_name
+    if user_update.email != "string":
+        current_user.email = user_update.email  
 
     session.add(current_user)
     session.commit()
     session.refresh(current_user)
 
     return {"message": "Profile updated successfully", "updated profile": current_user}
+
+@app.delete("/api/users/me")
+def disable_profile(current_user: Annotated[User, Depends(get_current_active_user)], session: SessionDependancy):
+    current_user.disabled = True
+
+    session.add(current_user)
+    session.commit()
+    session.refresh(current_user)
+
+    return {"message": "Profile disabled", "disabled": current_user.disabled}
 
 
 # Upload a new case file
