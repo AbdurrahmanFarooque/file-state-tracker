@@ -10,6 +10,7 @@ dev = [
 name = "file-state-tracker"
 version = "0.1.0"
 dependencies = [
+    "alembic>=1.18.5",
     "fastapi[standard]>=0.140.13",
     "psycopg2>=2.9.12",
     "pwdlib[argon2]>=0.3.0",
