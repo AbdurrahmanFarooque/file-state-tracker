@@ -22,6 +22,8 @@ class TransactionStatus(str, Enum):
 class UserRole(str, Enum):
     section_assistant = "section assistant"
     listing_officer = "listing officer"
+    court_officer = "court officer"
+    personal_secretary = "personal secretary"
 
 
 class UserBase(SQLModel):
@@ -29,7 +31,6 @@ class UserBase(SQLModel):
     full_name: str | None = None
     email: str | None = None
     role: UserRole = UserRole.section_assistant
-    disabled: bool = False
 
 
 class UserPublic(UserBase):
@@ -38,7 +39,7 @@ class UserPublic(UserBase):
 
 class UserCreate(UserBase):
     password: str
-    disabled: bool | None = Field(default=False, exclude=True)
+    disabled: bool | None = Field(default=False)
 
     model_config = {
         "json_schema_extra": {
@@ -57,6 +58,7 @@ class UserCreate(UserBase):
 
 class User(UserBase, SQLModel, table=True):
     user_id: int | None = Field(default=None, primary_key=True)
+    disabled: bool | None = False
     hashed_password: str
 
     at_location: int | None = Field(default=None, foreign_key="filelocation.location_id")

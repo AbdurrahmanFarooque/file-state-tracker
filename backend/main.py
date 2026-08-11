@@ -7,7 +7,7 @@ from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from sqlmodel import select
 from pwdlib import PasswordHash
 
-from backend.models import CaseFile, FileLocation, FileLocationCreate, UserCreate, UserPublic, UserUpdate, User, Token, UserRole
+from backend.models import CaseFile, FileLocation, FileLocationCreate, UserBase, UserCreate, UserPublic, UserUpdate, User, Token, UserRole
 from backend.database import create_db_and_tables, populate_filelocation, SessionDependancy
 from backend.auth import authenticate_user, create_access_token, get_current_active_user, get_password_hash, ACCESS_TOKEN_EXPIRE_MINUTES
 
@@ -42,7 +42,7 @@ def login_for_access_token(session: SessionDependancy, form_data: Annotated[OAut
 
 
 @app.post("/api/auth/register")
-def register_new_user(session: SessionDependancy, user: UserCreate):
+def register_new_user(session: SessionDependancy, user: UserCreate) -> UserBase:
     hashed_password = get_password_hash(user.password)
     user_data = user.model_dump(exclude={"password"})
 
@@ -51,7 +51,7 @@ def register_new_user(session: SessionDependancy, user: UserCreate):
     session.commit()
     session.refresh(db_user)
 
-    return {"message": "User added successfully", "cred": {"id": db_user.user_id, "username": db_user.username, "password": db_user.hashed_password}}
+    return user
 
 
 @app.get("/api/users/me", response_model=UserPublic)
