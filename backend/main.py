@@ -1,12 +1,13 @@
 from datetime import timedelta
+from enum import Enum
 from typing import Annotated
 
-from fastapi import FastAPI, HTTPException, Depends, status
+from fastapi import FastAPI, HTTPException, Depends, Form, status
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from sqlmodel import select
 from pwdlib import PasswordHash
 
-from backend.models import CaseFile, FileLocation, UserCreate, UserPublic, UserUpdate, User, Token, UserRole
+from backend.models import CaseFile, FileLocation, FileLocationCreate, UserCreate, UserPublic, UserUpdate, User, Token, UserRole
 from backend.database import create_db_and_tables, populate_filelocation, SessionDependancy
 from backend.auth import authenticate_user, create_access_token, get_current_active_user, get_password_hash, ACCESS_TOKEN_EXPIRE_MINUTES
 
@@ -36,7 +37,7 @@ def login_for_access_token(session: SessionDependancy, form_data: Annotated[OAut
             headers={"WWW-Authenticate": "Bearer"},
         )
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-    access_token = create_access_token(data={"sub": user.username}, expires_delta=access_token_expires)
+    access_token = create_access_token(data={"sub": user.full_name}, expires_delta=access_token_expires)
     return Token(access_token=access_token, token_type="bearer")
 
 
@@ -61,21 +62,20 @@ def read_user_me(current_user: Annotated[User, Depends(get_current_active_user)]
 
 @app.get("/api/users/me/items")
 def read_own_items(current_user: Annotated[User, Depends(get_current_active_user)]):
-    return {"item_id": "Foo", "owner": current_user.username}
+    return {"item_id": "Foo", "owner": current_user.full_name}
 
 
 @app.patch("/api/users/me")
 def update_profile(user_update: UserUpdate, current_user: Annotated[User, Depends(get_current_active_user)], session: SessionDependancy):
-    if user_update.full_name != "string":
-        current_user.full_name = user_update.full_name
-    if user_update.email != "string":
-        current_user.email = user_update.email  
+    current_user.full_name = user_update.full_name
+    current_user.email = user_update.email  
 
     session.add(current_user)
     session.commit()
     session.refresh(current_user)
 
     return {"message": "Profile updated successfully", "updated profile": current_user}
+
 
 @app.delete("/api/users/me")
 def disable_profile(current_user: Annotated[User, Depends(get_current_active_user)], session: SessionDependancy):
@@ -88,7 +88,23 @@ def disable_profile(current_user: Annotated[User, Depends(get_current_active_use
     return {"message": "Profile disabled", "disabled": current_user.disabled}
 
 
-# Upload a new case file
+@app.post("/api/locations")
+def create_location(location: FileLocationCreate, session: SessionDependancy):
+    # Check if the location already exists
+    location_exists = session.exec(select(FileLocation).where(FileLocation.name == location.name)).first() is not None
+    if location_exists:
+        raise HTTPException(status_code=400, detail=f"Location '{location.name}' already exists.")
+
+    # Create new FileLocation
+    db_location = FileLocation(name=location.name)
+    session.add(db_location)
+    session.commit()
+    session.refresh(db_location)
+
+    return {"message": "Location added successfully", "location": db_location.name}
+
+
+# Upload a new case file (remove function?)
 @app.post("/api/case_files/{cnr}")
 def upload_case_file(cnr: int, location: str, session: SessionDependancy):
     # Check if the case file already exists
@@ -100,10 +116,10 @@ def upload_case_file(cnr: int, location: str, session: SessionDependancy):
     file_location_exists = session.exec(select(FileLocation).where(FileLocation.name == location)).first() is not None
     if not file_location_exists:
         raise HTTPException(status_code=400, detail=f"File location '{location}' does not exist.")
-    file_location_id = session.exec(select(FileLocation.id).where(FileLocation.name == location)).one()
+    file_location_id = session.exec(select(FileLocation.location_id).where(FileLocation.name == location)).one()
 
     # Create a new case file
-    db_case_file = CaseFile(cnr=cnr, file_location_id=file_location_id)
+    db_case_file = CaseFile(cnr=cnr, location_id=file_location_id)
     session.add(db_case_file)
     session.commit()
     session.refresh(db_case_file)
@@ -138,9 +154,9 @@ def update_case_file_location(cnr: int, location: str, session: SessionDependanc
     file_location_exists = session.exec(select(FileLocation).where(FileLocation.name == location)).first() is not None
     if not file_location_exists:
         raise HTTPException(status_code=400, detail=f"File location '{location}' does not exist.")
-    file_location_id = session.exec(select(FileLocation.id).where(FileLocation.name == location)).one()
+    file_location_id = session.exec(select(FileLocation.location_id).where(FileLocation.name == location)).one()
 
-    case_file.file_location_id = file_location_id
+    case_file.location_id = file_location_id
     session.add(case_file)
     session.commit()
     session.refresh(case_file)
@@ -162,3 +178,9 @@ def delete_case_file(cnr: int, session: SessionDependancy):
     session.commit()
 
     return {"message": "Case file deleted successfully", "case_file": {"cnr": case_file_cnr, "location": case_file_location}}
+
+
+# Check 'Body - Nested Models''
+@app.patch("api/case_files/")
+def send_case_files(case_files: list[CaseFile], session: SessionDependancy):
+    return {}

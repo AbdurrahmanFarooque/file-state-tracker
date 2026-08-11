@@ -2,6 +2,8 @@ from enum import Enum
 from pydantic import BaseModel
 from sqlmodel import SQLModel, Relationship, Field
 
+from datetime import datetime
+
 
 class Token(BaseModel):
     access_token: str
@@ -12,52 +14,94 @@ class TokenData(BaseModel):
     username: str | None = None
 
 
+class TransactionStatus(str, Enum):
+    pending = "pending"
+    completed = "completed"
+
+
 class UserRole(str, Enum):
     section_assistant = "section assistant"
     listing_officer = "listing officer"
 
 
 class UserBase(SQLModel):
+    username: str
     full_name: str | None = None
     email: str | None = None
+    role: UserRole = UserRole.section_assistant
+    disabled: bool = False
 
 
 class UserPublic(UserBase):
-    username: str
-    user_role: UserRole
-    disabled: bool
+    pass
 
 
 class UserCreate(UserBase):
-    username: str
     password: str
-    disabled: bool | None = False
-    user_role: UserRole = UserRole.section_assistant
+    disabled: bool | None = Field(default=False, exclude=True)
 
-
-class UserUpdate(UserBase):
-    pass
+    model_config = {
+        "json_schema_extra": {
+            "examples": [
+                {
+                    "username": "john123",
+                    "full_name": "John Doe",
+                    "email": "john@example.com",
+                    "role": "section assistant",
+                    "password": "1122",
+                }
+            ]
+        }
+    }
 
 
 class User(UserBase, SQLModel, table=True):
     user_id: int | None = Field(default=None, primary_key=True)
-    username: str
-    user_role: UserRole
     hashed_password: str
-    disabled: bool
+
+    at_location: int | None = Field(default=None, foreign_key="filelocation.location_id")
+
+
+class UserUpdate(SQLModel):
+    full_name: str | None = User.full_name
+    email: str | None = User.email
+
+    model_config = {
+        "json_schema_extra": {
+            "examples": [
+                {
+                    "full_name": "John Doe",
+                    "email": "john@example.com"
+                }
+            ]
+        }
+    }
+
+    
+class CaseFileTransaction(SQLModel, table=True):
+    id: int | None = Field(default=None, primary_key=True)
+    transaction_time: datetime | None = None
+    cnr: int = Field(foreign_key="casefile.cnr")
+    sender_id: int = Field(foreign_key="user.user_id")
+    recipient_id: int = Field(foreign_key="user.user_id")
+    sent_from_location: int = Field(foreign_key="filelocation.location_id")
+    sent_to_location: int = Field(foreign_key="filelocation.location_id")
+    status: TransactionStatus | None = None
     
 
-# case_file
 class CaseFile(SQLModel, table=True):
     cnr: int = Field(primary_key=True)
-    file_location_id: int | None = Field(default=None, foreign_key="filelocation.id")
+    location_id: int | None = Field(default=None, foreign_key="filelocation.location_id")
 
     file_location: "FileLocation" = Relationship(back_populates="case_files")
 
 
-# file_location
 class FileLocation(SQLModel, table=True):
-    id: int | None = Field(default=None, primary_key=True)
+    location_id: int | None = Field(default=None, primary_key=True)
     name: str = Field(unique=True)
 
     case_files: list["CaseFile"] = Relationship(back_populates="file_location")
+
+
+class FileLocationCreate(SQLModel):
+    name: str
