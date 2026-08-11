@@ -39,7 +39,7 @@ class UserPublic(UserBase):
 
 class UserCreate(UserBase):
     password: str
-    disabled: bool | None = Field(default=False)
+    disabled: bool | None = False
 
     model_config = {
         "json_schema_extra": {
@@ -58,7 +58,7 @@ class UserCreate(UserBase):
 
 class User(UserBase, SQLModel, table=True):
     user_id: int | None = Field(default=None, primary_key=True)
-    disabled: bool | None = False
+    disabled: bool
     hashed_password: str
 
     at_location: int | None = Field(default=None, foreign_key="filelocation.location_id")
