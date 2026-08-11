@@ -128,10 +128,10 @@ def upload_case_file(cnr: int, location: str, session: SessionDependancy):
 
 
 # Read all case files
-@app.get("/api/case_files/")
+@app.get("/api/case_files/", response_model=list[CaseFile])
 def list_case_files(session: SessionDependancy, token: Annotated[str, Depends(oauth2_scheme)]):
     case_files = session.exec(select(CaseFile)).all()
-    return {"case_files": [{"cnr": case_file.cnr, "location":case_file.file_location.name} for case_file in case_files]}
+    return case_files
 
 
 # Read a specific case file
