@@ -26,7 +26,7 @@ class UserRole(str, Enum):
     personal_secretary = "personal secretary"
 
 
-class UserBase(SQLModel):
+class UserBase(BaseModel):
     username: str
     full_name: str | None = None
     email: str | None = None
@@ -64,7 +64,7 @@ class User(UserBase, SQLModel, table=True):
     at_location: int | None = Field(default=None, foreign_key="filelocation.location_id")
 
 
-class UserUpdate(SQLModel):
+class UserUpdate(BaseModel):
     full_name: str | None = User.full_name
     email: str | None = User.email
 
