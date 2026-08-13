@@ -41,7 +41,7 @@ def login_for_access_token(session: SessionDependancy, form_data: Annotated[OAut
     return Token(access_token=access_token, token_type="bearer")
 
 
-@app.post("/api/auth/register")
+@app.post("/api/auth/register", tags=["users"])
 def register_new_user(session: SessionDependancy, user: UserCreate) -> UserBase:
     hashed_password = get_password_hash(user.password)
     user_data = user.model_dump(exclude={"password"})
@@ -54,18 +54,18 @@ def register_new_user(session: SessionDependancy, user: UserCreate) -> UserBase:
     return user
 
 
-@app.get("/api/users/me", response_model=UserPublic)
+@app.get("/api/users/me", response_model=UserPublic, tags=["users"])
 def read_user_me(current_user: Annotated[User, Depends(get_current_active_user)]):
     # print(current_user)
     return current_user
 
 
-@app.get("/api/users/me/items")
+@app.get("/api/users/me/items", tags=["users"])
 def read_own_items(current_user: Annotated[User, Depends(get_current_active_user)]):
     return {"item_id": "Foo", "owner": current_user.full_name}
 
 
-@app.patch("/api/users/me")
+@app.patch("/api/users/me", tags=["users"])
 def update_profile(user_update: UserUpdate, current_user: Annotated[User, Depends(get_current_active_user)], session: SessionDependancy):
     current_user.full_name = user_update.full_name
     current_user.email = user_update.email  
@@ -77,7 +77,7 @@ def update_profile(user_update: UserUpdate, current_user: Annotated[User, Depend
     return {"message": "Profile updated successfully", "updated profile": current_user}
 
 
-@app.delete("/api/users/me")
+@app.delete("/api/users/me", tags=["users"])
 def disable_profile(current_user: Annotated[User, Depends(get_current_active_user)], session: SessionDependancy):
     current_user.disabled = True
 
@@ -88,7 +88,7 @@ def disable_profile(current_user: Annotated[User, Depends(get_current_active_use
     return {"message": "Profile disabled", "disabled": current_user.disabled}
 
 
-@app.post("/api/locations")
+@app.post("/api/locations", tags=["files"])
 def create_location(location: FileLocationCreate, session: SessionDependancy):
     # Check if the location already exists
     location_exists = session.exec(select(FileLocation).where(FileLocation.name == location.name)).first() is not None
@@ -105,7 +105,7 @@ def create_location(location: FileLocationCreate, session: SessionDependancy):
 
 
 # Upload a new case file (remove function?)
-@app.post("/api/case_files/{cnr}")
+@app.post("/api/case_files/{cnr}", tags=["files"])
 def upload_case_file(cnr: int, location: str, session: SessionDependancy):
     # Check if the case file already exists
     case_file_exists = session.get(CaseFile, cnr) is not None
@@ -128,14 +128,14 @@ def upload_case_file(cnr: int, location: str, session: SessionDependancy):
 
 
 # Read all case files
-@app.get("/api/case_files/", response_model=list[CaseFile])
+@app.get("/api/case_files/", response_model=list[CaseFile], tags=["files"])
 def list_case_files(session: SessionDependancy, token: Annotated[str, Depends(oauth2_scheme)]):
     case_files = session.exec(select(CaseFile)).all()
     return case_files
 
 
 # Read a specific case file
-@app.get("/api/case_files/{cnr}")
+@app.get("/api/case_files/{cnr}", tags=["files"])
 def read_case_file_location(cnr: int, session: SessionDependancy):
     case_file = session.get(CaseFile, cnr)
     if not case_file:
@@ -144,7 +144,7 @@ def read_case_file_location(cnr: int, session: SessionDependancy):
 
 
 # Update the location of a case file
-@app.patch("/api/case_files/{cnr}")
+@app.patch("/api/case_files/{cnr}", tags=["files"])
 def update_case_file_location(cnr: int, location: str, session: SessionDependancy):
     case_file = session.get(CaseFile, cnr)
     if not case_file:
@@ -165,7 +165,7 @@ def update_case_file_location(cnr: int, location: str, session: SessionDependanc
 
 
 # Delete a case file
-@app.delete("/api/case_files/{cnr}")
+@app.delete("/api/case_files/{cnr}", tags=["files"])
 def delete_case_file(cnr: int, session: SessionDependancy):
     case_file = session.get(CaseFile, cnr)
     if not case_file:
@@ -181,6 +181,6 @@ def delete_case_file(cnr: int, session: SessionDependancy):
 
 
 # Check 'Body - Nested Models''
-@app.patch("api/case_files/")
+@app.patch("api/case_files/", tags=["files"])
 def send_case_files(case_files: list[CaseFile], session: SessionDependancy):
     return {}
