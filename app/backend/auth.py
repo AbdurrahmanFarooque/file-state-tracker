@@ -7,9 +7,9 @@ from fastapi.security import OAuth2PasswordBearer
 from pwdlib import PasswordHash
 from jwt.exceptions import InvalidTokenError
 
-from backend.user import get_user
-from backend.models import User, TokenData
-from backend.database import SessionDependancy
+from app.backend.user import get_user
+from app.backend.models import User, TokenData
+from app.backend.database import SessionDependancy
 
 
 SECRET_KEY = "229ff14dad75cf5a6fcf031ae6ddad50b4d0452d74bafd23c39d63a27d68384b"

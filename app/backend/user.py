@@ -1,7 +1,7 @@
 from sqlmodel import select
 
-from backend.models import User
-from backend.database import SessionDependancy
+from app.backend.models import User
+from app.backend.database import SessionDependancy
 
 
 def get_user(session: SessionDependancy, username: str | None = None):

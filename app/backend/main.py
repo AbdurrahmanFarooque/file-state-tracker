@@ -1,15 +1,40 @@
 from datetime import timedelta
 from enum import Enum
 from typing import Annotated
+from datetime import datetime
 
 from fastapi import FastAPI, HTTPException, Depends, Form, status
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from sqlmodel import select
 from pwdlib import PasswordHash
 
-from backend.models import CaseFile, FileLocation, FileLocationCreate, UserBase, UserCreate, UserPublic, UserUpdate, User, Token, UserRole
-from backend.database import create_db_and_tables, populate_filelocation, SessionDependancy
-from backend.auth import authenticate_user, create_access_token, get_current_active_user, get_password_hash, ACCESS_TOKEN_EXPIRE_MINUTES
+from app.backend.models import (
+    CaseFilePublic,
+    CaseFile,
+    CaseFileSend, 
+    FileLocation, 
+    FileLocationCreate, 
+    CaseFileTransaction, 
+    UserBase, UserCreate, 
+    UserPublic, 
+    UserUpdate, 
+    User, 
+    Token, 
+    UserRole, 
+    TransactionStatus
+)
+from app.backend.database import (
+    create_db_and_tables, 
+    populate_filelocation, 
+    SessionDependancy
+)
+from app.backend.auth import (
+    authenticate_user, 
+    create_access_token, 
+    get_current_active_user, 
+    get_password_hash, 
+    ACCESS_TOKEN_EXPIRE_MINUTES
+)
 
 
 password_hash = PasswordHash.recommended()
@@ -128,10 +153,19 @@ def upload_case_file(cnr: int, location: str, session: SessionDependancy):
 
 
 # Read all case files
-@app.get("/api/case_files/", response_model=list[CaseFile], tags=["files"])
+@app.get("/api/case_files/", response_model=list[CaseFilePublic], tags=["files"])
 def list_case_files(session: SessionDependancy, token: Annotated[str, Depends(oauth2_scheme)]):
     case_files = session.exec(select(CaseFile)).all()
-    return case_files
+
+    case_files_public = [
+        {
+            "cnr": case_file.cnr,
+            "location": case_file.file_location.name
+        } for case_file in case_files
+    ]
+
+    print(case_files_public)
+    return case_files_public
 
 
 # Read a specific case file
@@ -141,6 +175,39 @@ def read_case_file_location(cnr: int, session: SessionDependancy):
     if not case_file:
         raise HTTPException(status_code=404, detail=f"Case file with CNR '{cnr}' not found.")
     return {"case_file": {"cnr": case_file.cnr, "location": case_file.file_location.name}}
+
+
+# Check 'Body - Nested Models'
+@app.patch("/api/case_files/send", tags=["files"])
+def initiate_case_file_transaction(bundle: CaseFileSend, session: SessionDependancy):
+    """
+    - Assume CNR values are valid, selected from a list (not input manually)
+    - Assume location is valid (selected from a dropdown)
+    """
+    for file_input in bundle.case_file_list:
+        case_file = session.get(CaseFile, file_input.cnr)
+        if case_file:
+            print(case_file.cnr, case_file.file_location.name, bundle.send_to_location.name)
+            send_to_location_id = session.exec(
+                select(FileLocation.location_id)
+                .where(FileLocation.name == bundle.send_to_location.name)
+            ).one()
+
+            db_transaction = CaseFileTransaction(
+                transaction_time=datetime.now(),
+                cnr=case_file.cnr,
+                sender_id=2,
+                recipient_id=3,
+                sent_from_location=case_file.file_location.location_id,
+                sent_to_location=send_to_location_id,
+                status=TransactionStatus.pending,
+            )
+
+            session.add(db_transaction)
+            session.commit()
+            session.refresh(db_transaction)
+            
+    return {"message": "transaction initiated"}
 
 
 # Update the location of a case file
@@ -178,9 +245,3 @@ def delete_case_file(cnr: int, session: SessionDependancy):
     session.commit()
 
     return {"message": "Case file deleted successfully", "case_file": {"cnr": case_file_cnr, "location": case_file_location}}
-
-
-# Check 'Body - Nested Models''
-@app.patch("api/case_files/", tags=["files"])
-def send_case_files(case_files: list[CaseFile], session: SessionDependancy):
-    return {}

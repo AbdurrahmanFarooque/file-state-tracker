@@ -86,24 +86,44 @@ class CaseFileTransaction(SQLModel, table=True):
     cnr: int = Field(foreign_key="casefile.cnr")
     sender_id: int = Field(foreign_key="user.user_id")
     recipient_id: int = Field(foreign_key="user.user_id")
-    sent_from_location: int = Field(foreign_key="filelocation.location_id")
-    sent_to_location: int = Field(foreign_key="filelocation.location_id")
+    sent_from_location: int | None = Field(foreign_key="filelocation.location_id")
+    sent_to_location: int | None = Field(foreign_key="filelocation.location_id")
     status: TransactionStatus | None = None
-    
 
-class CaseFile(SQLModel, table=True):
+    case_file: "CaseFile" = Relationship(back_populates="transactions")
+
+
+class CaseFileBase(BaseModel):
+    cnr: int
+
+
+class CaseFile(CaseFileBase, SQLModel, table=True):
     cnr: int = Field(primary_key=True)
     location_id: int | None = Field(default=None, foreign_key="filelocation.location_id")
 
     file_location: "FileLocation" = Relationship(back_populates="case_files")
+    transactions: list["CaseFileTransaction"] = Relationship(back_populates="case_file")
 
 
-class FileLocation(SQLModel, table=True):
+class CaseFilePublic(CaseFileBase):
+    location: str
+
+
+class FileLocationBase(BaseModel):
+    name: str
+
+
+class FileLocation(FileLocationBase, SQLModel, table=True):
     location_id: int | None = Field(default=None, primary_key=True)
     name: str = Field(unique=True)
 
     case_files: list["CaseFile"] = Relationship(back_populates="file_location")
 
 
-class FileLocationCreate(SQLModel):
-    name: str
+class FileLocationCreate(FileLocationBase):
+    pass
+
+
+class CaseFileSend(BaseModel):
+    case_file_list: list[CaseFileBase]
+    send_to_location: FileLocationBase

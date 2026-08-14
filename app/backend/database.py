@@ -3,13 +3,13 @@ from typing import Annotated
 from fastapi import Depends
 from sqlmodel import select, create_engine, SQLModel, Session
 
-from backend.models import FileLocation
+from app.backend.models import FileLocation
 
 
 POSTGRES_URL = "postgresql://postgres:1234@localhost:5432/postgres"
 
 connect_args = {"check_same_thread": False}
-engine = create_engine(POSTGRES_URL, echo=True) # Remove echo=True in production # connect_args=connect_args
+engine = create_engine(POSTGRES_URL, echo=False) # Remove echo=True in production # connect_args=connect_args
 
 
 def create_db_and_tables():

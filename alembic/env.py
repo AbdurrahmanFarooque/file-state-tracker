@@ -5,8 +5,8 @@ from sqlalchemy import pool
 
 from alembic import context
 
-from backend.database import POSTGRES_URL
-from backend.models import SQLModel
+from app.backend.database import POSTGRES_URL
+from app.backend.models import SQLModel
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
