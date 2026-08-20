@@ -2,9 +2,7 @@ from typing import Annotated
 from datetime import datetime
 
 from fastapi import APIRouter, HTTPException, Depends
-from fastapi.security import OAuth2PasswordBearer
 from sqlmodel import select
-from pwdlib import PasswordHash
 
 from app.backend.database import SessionDependancy
 from app.backend.models import (
@@ -13,9 +11,11 @@ from app.backend.models import (
     CaseFileSend,
     CaseFileTransaction,
     TransactionStatus,
-    FileLocation
+    FileLocation,
+    User
 )
 from app.backend.core.security import oauth2_scheme
+from app.backend.dependencies import get_current_active_user
 
 
 router = APIRouter(
@@ -63,10 +63,14 @@ def upload_case_file(cnr: int, location: str, session: SessionDependancy):
     return {"message": "Case file uploaded successfully", "case_file": {"cnr": db_case_file.cnr, "location": location}}
 
 
-# Read all case files
+# Read all case files that are assigned to user
 @router.get("/", response_model=list[CaseFilePublic])
-def list_case_files(session: SessionDependancy, token: Annotated[str, Depends(oauth2_scheme)]):
-    case_files = session.exec(select(CaseFile)).all()
+def list_case_files(
+    session: SessionDependancy, 
+    token: Annotated[str, Depends(oauth2_scheme)], 
+    current_user: Annotated[User, Depends(get_current_active_user)]
+):
+    case_files = session.exec(select(CaseFile).where(CaseFile.location_id == current_user.at_location)).all()
 
     case_files_public = [
         {

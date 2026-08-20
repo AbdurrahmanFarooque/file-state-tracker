@@ -1,4 +1,5 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException
+from sqlmodel import select
 
 from app.backend.database import SessionDependancy
 from app.backend.dependencies import CurrentActiveUserDependency
@@ -9,6 +10,7 @@ from app.backend.models import (
     UserCreate,
     UserUpdate,
     UserPublic,
+    FileLocation
 )
 
 router = APIRouter(
@@ -19,10 +21,18 @@ router = APIRouter(
 
 @router.post("/auth/register")
 def register_new_user(session: SessionDependancy, user: UserCreate) -> UserBase:
-    hashed_password = get_password_hash(user.password)
-    user_data = user.model_dump(exclude={"password"})
+    # Check if location is valid
+    location_id = session.exec(
+        select(FileLocation.location_id)
+        .where(FileLocation.name == user.at_location)
+        ).one()
+    if not location_id:
+        raise HTTPException(status_code=404, detail=f"Location {user.at_location} is invalid")
 
-    db_user = User(**user_data, hashed_password=hashed_password)
+    hashed_password = get_password_hash(user.password)
+    user_data = user.model_dump(exclude={"password", "at_location"})
+
+    db_user = User(**user_data, hashed_password=hashed_password, at_location=location_id)
     session.add(db_user)
     session.commit()
     session.refresh(db_user)

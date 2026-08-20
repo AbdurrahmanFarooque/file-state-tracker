@@ -41,6 +41,7 @@ class UserPublic(UserBase):
 class UserCreate(UserBase):
     password: str
     disabled: bool | None = False
+    at_location: str
 
     model_config = {
         "json_schema_extra": {
@@ -51,6 +52,7 @@ class UserCreate(UserBase):
                     "email": "john@example.com",
                     "role": "section assistant",
                     "password": "1122",
+                    "at_location": "court-f1"
                 }
             ]
         }
