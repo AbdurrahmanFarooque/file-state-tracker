@@ -1,5 +1,5 @@
 [tool.fastapi]
-entrypoint = "backend.main:app"
+entrypoint = "app.backend.main:app"
 
 [dependency-groups]
 dev = [

@@ -17,6 +17,7 @@ class TokenData(BaseModel):
 class TransactionStatus(str, Enum):
     pending = "pending"
     completed = "completed"
+    canceled = "canceled"
 
 
 class UserRole(str, Enum):
